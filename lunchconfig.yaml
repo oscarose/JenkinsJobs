@@ -51,7 +51,7 @@ Resources:
     Properties:
       HostedZoneName: abrahamogba.com.
       Name: !Join [ ".", [myway,abrahamogba,com] ]
-      Type: A
+      Type: CNAME
       TTL: '900'
       ResourceRecords:
         - Fn::GetAtt: ELB.DNSName
