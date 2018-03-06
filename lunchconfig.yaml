@@ -1,0 +1,95 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Parameters:
+  ElbName:
+    #Description:> ElasticLoadBalancer Name
+    Type: String
+    AllowedValues: [gr, bl]
+    Default: gr
+
+  SslCertificate:
+    Type: String
+    Default: arn:aws:acm:us-east-1:326715682593:certificate/15e66b64-9c63-48ea-bc2b-96ff89f97dbd
+   
+
+Resources:
+
+  ELB: 
+    Type: AWS::ElasticLoadBalancing::LoadBalancer
+    Properties:
+      LoadBalancerName: !Join [ "-", ["pass", "me", !Ref "ElbName"] ]
+      Listeners:
+      - InstancePort: 80
+        LoadBalancerPort: 443
+        Protocol: HTTPS
+        SSLCertificateId: !Ref "SslCertificate"
+      SecurityGroups: 
+        - sg-7af5340c
+        - sg-30fe3f46
+      AvailabilityZones:
+        -  us-east-1c
+        -  us-east-1b
+ #     Instances:
+ #       - !Ref EC2Instance
+ #       - !Ref MyInstance
+      HealthCheck:
+        Target: TCP:80
+        HealthyThreshold: '3'
+        UnhealthyThreshold: '5'
+        Interval: '30'
+        Timeout: '5'
+
+  #Outputs:
+  #  elbDNSName:
+  #    Description: ELB dns name
+  #    Value:
+  #      !GetAtt ELB.DNSName
+
+
+  OgbaARecords:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneName: abrahamogba.com.
+      Name: !Join [ ".", [myway,abrahamogba,com] ]
+      Type: A
+      TTL: '900'
+      ResourceRecords:
+        - Fn::GetAtt: AppScalling.PublicIp
+
+
+  Appconfig:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+ #     AssociatePublicIpAddress: true
+      ImageId: ami-26ebbc5c
+ #     InstanceId: devopstest
+      InstanceType: t2.micro
+      KeyName: Devopsaws
+      SecurityGroups:
+        - sg-30fe3f46
+        - sg-7af5340c
+      UserData: 
+        Fn::Base64: |
+           #!/bin/bash
+           yum update -y
+           yum install httpd -y
+           service httpd start
+           chkconfig httpd on
+           echo "<head><body>i am a cloud engineer</body></head>" > /var/www/html/index.html
+           service httpd restart
+
+  AppScalling:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      AvailabilityZones:
+        -  us-east-1c
+        -  us-east-1b
+      Cooldown: 120
+      DesiredCapacity: 2
+      HealthCheckGracePeriod: 1800
+      HealthCheckType: EC2
+      LaunchConfigurationName: !Ref Appconfig
+      LoadBalancerNames: 
+        - !Ref ELB
+      MaxSize: 2
+      MinSize: 1
