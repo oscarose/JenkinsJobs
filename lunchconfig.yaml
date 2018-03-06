@@ -54,7 +54,7 @@ Resources:
       Type: A
       TTL: '900'
       ResourceRecords:
-        - Fn::GetAtt: AppScalling.PublicIp
+        - Fn::GetAtt: ELB.DNSName
 
 
   Appconfig:
